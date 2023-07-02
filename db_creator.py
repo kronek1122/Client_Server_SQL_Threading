@@ -16,7 +16,7 @@ conn.autocommit = True
 c = conn.cursor()
 
 try:
-    c.execute('CREATE DATABASE db_cs;')
+    c.execute('CREATE DATABASE db_cs_threading;')
 except errors.DuplicateDatabase:
     pass
 
