@@ -1,13 +1,14 @@
 import threading
-from queue import Queue, Empty
+import time
+import os
+from queue import Queue, Empty, Full
 from db import DatabaseManager
 from dotenv import load_dotenv
-import os
 
 class ConnectionPool:
-    def __init__(self, initial_connections=5, max_connections=100):
+    def __init__(self, min_connections=5, max_connections=100):
         load_dotenv()
-        self.initial_connections = initial_connections
+        self.min_connections = min_connections
         self.max_connections = max_connections
         self.host = os.getenv('host')
         self.port = os.getenv('port')
@@ -18,9 +19,12 @@ class ConnectionPool:
         self.connections = Queue(maxsize=max_connections)
         self.initialize_connections()
 
+        self.connections_check = threading.Thread(target=self.connections_manager)
+        self.connections_check.daemon = True
+        self.connections_check.start()
 
     def initialize_connections(self):
-        for i in range(self.initial_connections):
+        for _ in range(self.min_connections):
             connection = self.create_connection()
             if connection:
                 self.connections.put(connection)
@@ -29,12 +33,42 @@ class ConnectionPool:
     def create_connection(self):
         connection = DatabaseManager(self.database, self.user, self.password, self.host)
         return connection
-    
+
 
     def get_connection(self):
         try:
             connection = self.connections.get(timeout=2)
         except Empty:
-            connection = self.create_connection
+            try:
+                self.initialize_connections()
+                connection = self.connections.get(timeout=2)
+            except Full:
+                raise Exception('Connection pool limit reached')  
         return connection
+
+
+    def connections_manager(self):
+        while True:
+            time.sleep(60)
+            with self.lock:
+                while self.connections.qsize()>self.min_connections:
+                    connection = self.connections.get()
+                    try:
+                        connection.close()
+                    except Exception:
+                        pass
+
+
+    def destroy_connections(self):
+        with self.lock:
+            while not self.connections.empty():
+                connection = self.connections.get()
+                try:
+                    connection.close()
+                except Exception:
+                    pass
+                    
+
+    def release_connection(self, connection):
+        self.connections.put(connection)
 
