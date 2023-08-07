@@ -115,3 +115,10 @@ class DatabaseManager:
         query = f"UPDATE {user_name} SET is_unread = FALSE WHERE is_unread = TRUE;"
         self.c.execute(query)
         self.conn.commit()
+
+
+    def close(self):
+        if self.c:
+            self.c.close()
+        if self.conn:
+            self.conn.close()
