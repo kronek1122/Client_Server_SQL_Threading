@@ -1,5 +1,7 @@
-from datetime import datetime
 import os
+import threading
+from datetime import datetime
+from db_connection_pool import ConnectionPool  
 from db import DatabaseManager
 from dotenv import load_dotenv
 
@@ -9,23 +11,36 @@ db_database = os.getenv('database')
 db_user = os.getenv('user')
 db_password = os.getenv('password')
 db_host = os.getenv('host')
-db_port = os.getenv('port')
 
-def one_connection(i):
-    start1= datetime.now()
-    db = DatabaseManager(db_database, db_user, db_password, db_host)
-    for x in range(i):
-        db.get_users()
-    stop1= datetime.now()
-    return f'One db connection: {stop1-start1} seconds'
-
-def many_connection(i):
-    start2 = datetime.now()
-    for x in range(i):
+def stress_test(pool, num_connections, num_iterations):
+    def test():
         db = DatabaseManager(db_database, db_user, db_password, db_host)
-        db.get_users()
-    stop2 = datetime.now()
-    return f'Many db connection: {stop2-start2} seconds'
+        for _ in range(num_iterations):
+            conn = pool.get_connection()
+            try:
+                users = db.get_users()
+                print(users)
+            except Exception as e:
+                print("Error:", e)
+            finally:
+                pool.release_connection(conn)
 
-print(one_connection(1000))
-print(many_connection(1000))
+    threads = []
+    for _ in range(num_connections):
+        thread = threading.Thread(target=test)
+        threads.append(thread)
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+
+if __name__ == "__main__":
+    start= datetime.now()
+    pool = ConnectionPool(5, 100)
+
+    num_connections = 105  # Number of concurrent connections
+    num_iterations = 100  # Number of times each connection will fetch users
+
+    stress_test(pool, num_connections, num_iterations)
+    stop = datetime.now()
+    print (f'Time: {stop-start} seconds')

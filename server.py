@@ -12,7 +12,7 @@ class Server:
         self.start_time = datetime.now()
         self.server_socket = s.socket(s.AF_INET, s.SOCK_STREAM)
         self.server_socket.bind((self.host, self.port))
-        self.server_socket.listen(2)
+        self.server_socket.listen(100)
         self.user = User()
 
 
