@@ -6,7 +6,6 @@ from db import DatabaseManager
 from dotenv import load_dotenv
 
 load_dotenv()
-
 db_database = os.getenv('database')
 db_user = os.getenv('user')
 db_password = os.getenv('password')
@@ -19,7 +18,8 @@ def stress_test(pool, num_connections, num_iterations):
             conn = pool.get_connection()
             try:
                 users = db.get_users()
-                print(users)
+                # print(users)
+
             except Exception as e:
                 print("Error:", e)
             finally:
@@ -34,12 +34,13 @@ def stress_test(pool, num_connections, num_iterations):
     for thread in threads:
         thread.join()
 
+
 if __name__ == "__main__":
     start= datetime.now()
-    pool = ConnectionPool(5, 100)
+    pool = ConnectionPool(5, 20)
 
-    num_connections = 105  # Number of concurrent connections
-    num_iterations = 100  # Number of times each connection will fetch users
+    num_connections = 1000  # Number of concurrent connections
+    num_iterations = 10  # Number of times each connection will fetch users
 
     stress_test(pool, num_connections, num_iterations)
     stop = datetime.now()
