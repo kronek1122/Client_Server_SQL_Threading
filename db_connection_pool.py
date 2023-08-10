@@ -31,8 +31,12 @@ class ConnectionPool:
 
 
     def create_connection(self):
-        connection = DatabaseManager(self.database, self.user, self.password, self.host)
-        return connection
+        try:
+            connection = DatabaseManager(self.database, self.user, self.password, self.host)
+            return connection
+        except Exception as exp:
+            print("Error creating connection:", exp)
+            return None
 
 
     def get_connection(self):
@@ -70,5 +74,11 @@ class ConnectionPool:
                     
 
     def release_connection(self, connection):
-        self.connections.put(connection)
+        try:
+            self.connections.put(connection, timeout=2)
+        except Full:
+            try:
+                connection.close()
+            except Exception:
+                pass
 

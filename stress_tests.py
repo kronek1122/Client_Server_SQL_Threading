@@ -20,8 +20,8 @@ def stress_test(pool, num_connections, num_iterations):
                 users = db.get_users()
                 # print(users)
 
-            except Exception as e:
-                print("Error:", e)
+            except Exception as exp:
+                print("Error:", exp)
             finally:
                 pool.release_connection(conn)
 
