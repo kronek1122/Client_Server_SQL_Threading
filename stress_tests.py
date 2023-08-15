@@ -1,6 +1,5 @@
 import os
 import threading
-from datetime import datetime
 from db_connection_pool import ConnectionPool  
 from db import DatabaseManager
 from dotenv import load_dotenv
@@ -18,10 +17,11 @@ def stress_test(pool, num_connections, num_iterations):
             conn = pool.get_connection()
             try:
                 users = db.get_users()
-                # print(users)
+                #print(users)
 
             except Exception as exp:
                 print("Error:", exp)
+
             finally:
                 pool.release_connection(conn)
 
@@ -36,12 +36,9 @@ def stress_test(pool, num_connections, num_iterations):
 
 
 if __name__ == "__main__":
-    start= datetime.now()
     pool = ConnectionPool(5, 20)
 
-    num_connections = 1000  # Number of concurrent connections
-    num_iterations = 10  # Number of times each connection will fetch users
+    num_connections = 100  # Number of concurrent connections
+    num_iterations = 1000  # Number of times each connection will fetch users
 
     stress_test(pool, num_connections, num_iterations)
-    stop = datetime.now()
-    print (f'Time: {stop-start} seconds')

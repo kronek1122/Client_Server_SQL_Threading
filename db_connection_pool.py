@@ -6,7 +6,7 @@ from db import DatabaseManager
 from dotenv import load_dotenv
 
 class ConnectionPool:
-    def __init__(self, min_connections=5, max_connections=100):
+    def __init__(self, min_connections=5, max_connections=50):
         load_dotenv()
         self.min_connections = min_connections
         self.max_connections = max_connections
@@ -15,8 +15,10 @@ class ConnectionPool:
         self.database = os.getenv('database')
         self.user = os.getenv('user')
         self.password = os.getenv('password')
-        self.lock = threading.Lock()
+        self.semaphore = threading.Semaphore(max_connections)
         self.connections = Queue(maxsize=max_connections)
+        self.start_time = time.time()
+        self.connections_released = 0
         self.initialize_connections()
 
         self.connections_check = threading.Thread(target=self.connections_manager)
@@ -40,21 +42,22 @@ class ConnectionPool:
 
 
     def get_connection(self):
-        try:
-            connection = self.connections.get(timeout=2)
-        except Empty:
+        with self.semaphore:
             try:
-                self.initialize_connections()
                 connection = self.connections.get(timeout=2)
-            except Full:
-                raise Exception('Connection pool limit reached')  
-        return connection
+            except Empty:
+                try:
+                    self.initialize_connections()
+                    connection = self.connections.get(timeout=2)
+                except Full:
+                    raise Exception('Connection pool limit reached')  
+            return connection
 
 
     def connections_manager(self):
         while True:
-            time.sleep(60)
-            with self.lock:
+            time.sleep(2)
+            with self.semaphore:
                 while self.connections.qsize()>self.min_connections:
                     connection = self.connections.get()
                     try:
@@ -62,9 +65,15 @@ class ConnectionPool:
                     except Exception:
                         pass
 
+            print(f"""
+                Time from start: {round(time.time() - self.start_time, 2)}
+                Realised connections: {self.connections_released}
+                Active connections: {self.connections.qsize()}
+""")
+
 
     def destroy_connections(self):
-        with self.lock:
+        with self.semaphore:
             while not self.connections.empty():
                 connection = self.connections.get()
                 try:
@@ -74,11 +83,12 @@ class ConnectionPool:
                     
 
     def release_connection(self, connection):
-        try:
-            self.connections.put(connection, timeout=2)
-        except Full:
+        with self.semaphore:
             try:
-                connection.close()
-            except Exception:
-                pass
-
+                self.connections.put(connection, timeout=2)
+            except Full:
+                try:
+                    connection.close()
+                except Exception:
+                    pass
+            self.connections_released += 1
