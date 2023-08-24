@@ -1,8 +1,9 @@
 import psycopg2
+from db_connection_pool import ConnectionPool
 
 class DatabaseManager:
     def __init__(self, database, user, password, host):
-        self.conn = psycopg2.connect(database=database, user = user, password = password, host = host)
+        self.conn = ConnectionPool(database=database, user = user, password = password, host = host)
         self.c = self.conn.cursor()
 
 
