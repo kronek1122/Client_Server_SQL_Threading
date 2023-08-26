@@ -3,8 +3,8 @@ from db_connection_pool import ConnectionPool
 
 class DatabaseManager:
     def __init__(self, database, user, password, host):
-        self.conn = ConnectionPool(database=database, user = user, password = password, host = host)
-        self.c = self.conn.cursor()
+        self.conn = ConnectionPool(database, user, password, host)
+        self.c = self.conn.get_connection().cursor()
 
 
     def add_user(self, user_name, password, is_admin):
@@ -18,10 +18,10 @@ class DatabaseManager:
         try: 
             self.c.execute(query, (user_name, password, is_admin))
             self.c.execute(user_table)
-            self.conn.commit()
+            self.conn.get_connection().commit()
             msg = 'User succesfully registered'
         except psycopg2.errors.UniqueViolation:
-            self.conn.rollback()
+            self.conn.get_connection().rollback()
             msg = 'User already exist'
         return msg
 
@@ -41,8 +41,11 @@ class DatabaseManager:
 
     def get_users(self):
         query = "SELECT user_name FROM user_info"
-        self.c.execute(query)
-        return self.c.fetchall()
+        try:
+            self.c.execute(query)
+            return self.c.fetchall()
+        except psycopg2.errors.ProgrammingError as exp:
+            return f"Error getting users: {exp}"
     
 
     def get_user(self,user_name):
@@ -56,10 +59,10 @@ class DatabaseManager:
         query = f"INSERT INTO {user_name} (message_text, sender, is_unread) VALUES {values};"
         try: 
             self.c.execute(query)
-            self.conn.commit()
+            self.conn.get_connection().commit()
             msg = f'You successfully send message to user {user_name}'
         except psycopg2.errors.UndefinedTable:
-            self.conn.rollback()
+            self.conn.get_connection().rollback()
             msg = "User doesn't exist"
         return msg
 
@@ -115,11 +118,11 @@ class DatabaseManager:
     def change_from_unread(self,user_name):
         query = f"UPDATE {user_name} SET is_unread = FALSE WHERE is_unread = TRUE;"
         self.c.execute(query)
-        self.conn.commit()
+        self.conn.get_connection().commit()
 
 
     def close(self):
         if self.c:
             self.c.close()
         if self.conn:
-            self.conn.close()
+            self.conn.get_connection().close()
