@@ -2,6 +2,7 @@
 
 import socket as s
 
+
 class ClientSocket:
     HOST = '127.0.0.1'
     PORT = 65432
@@ -15,7 +16,7 @@ class ClientSocket:
             user_command = input('Enter the command! (Type help for command list):  ').encode('utf8')
             self.client_socket.sendall(user_command)
             data = self.client_socket.recv(1024).decode('utf8')
-            if data == 'server closed':
+            if data == 'server closed' or data == 'disconnect':
                 print(data)
                 break
             else:

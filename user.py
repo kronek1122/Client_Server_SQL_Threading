@@ -2,6 +2,7 @@ import json, os
 from db import DatabaseManager
 from dotenv import load_dotenv
 import psycopg2
+from db_connection_pool import ConnectionPool
 
 load_dotenv()
 
@@ -96,3 +97,11 @@ class User:
         else:
             msg = 'First you must log in!'
         return json.dumps(msg, indent=1)
+    
+    def disconnect(self):
+        '''Disconnect user from server'''
+
+        msg = 'Disconnected from server'
+        self.db.close()
+        return json.dumps(msg, indent=1)
+        

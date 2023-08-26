@@ -28,7 +28,8 @@ class Server:
             'users' : 'return all user list',
             'send <user name> <massage>': 'send a message to the selected user',
             'inbox' : 'check messages in your inbox',
-            'unread' : 'check only unread messages'
+            'unread' : 'check only unread messages',
+            'disconnect' : 'disconnect client from server'
         }
         return json.dumps(msg, indent=1)
 
@@ -88,6 +89,10 @@ class Server:
 
             elif query_list[0] == 'unread':
                 connection.send(self.user.check_unread_messages().encode('utf8'))
+
+            elif query_list[0] == 'disconnect':
+                self.user.disconnect()
+                connection.send(('disconnect').encode('utf8'))
 
             elif query_list[0] == 'stop':
                 connection.send(('server closed').encode('utf8'))
