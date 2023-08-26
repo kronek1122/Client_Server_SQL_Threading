@@ -10,15 +10,11 @@ db_user = os.getenv('user')
 db_password = os.getenv('password')
 db_host = os.getenv('host')
 
-
 def stress_test(num_connections):
     def test():
-        db = DatabaseManager(db_database, db_user, db_password, db_host)
-        try:
-            db.get_users()
-            #time.sleep(1)
-        except Exception as exp:
-            print("Error get_users:", exp)
+        users = db.get_users()
+        return users
+
 
     threads = []
     for _ in range(num_connections):
@@ -31,6 +27,7 @@ def stress_test(num_connections):
 
 
 if __name__ == "__main__":
-    num_connections = 5000  # Number of concurrent connections
-
+    num_connections = 100000  # Number of concurrent connections
+    db = DatabaseManager(db_database, db_user, db_password, db_host)
     stress_test(num_connections)
+    db.close()
