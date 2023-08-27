@@ -9,8 +9,8 @@ class ConnectionPool:
         self.user = user
         self.password = password
         self.host = host
-        self.min_connections = 4
-        self.max_connections = 20
+        self.min_connections = 3
+        self.max_connections = 4
         self.connections_queue = Queue(maxsize=self.max_connections)
         self.semaphore = threading.Semaphore()
         self.start_time = time.time()
@@ -60,6 +60,7 @@ class ConnectionPool:
     def connections_manager(self):
         while True:
             while self.connections_queue.qsize()>self.min_connections:
+                print(self.connections_queue.qsize)
                 connection = self.connections_queue.get()
                 try:
                     connection.close()
@@ -90,6 +91,7 @@ class ConnectionPool:
             try:
                 self.connections_queue.put(connection, timeout=2)
                 self.active_connections -=1
+                self.connections_released += 1
             except Full:
                 try:
                     print("zamykanie połączenia")
@@ -97,5 +99,4 @@ class ConnectionPool:
                     print('połączenie zamknięte')
                 except Exception as exp:
                     print("Error:", exp)
-            self.connections_released += 1
 
