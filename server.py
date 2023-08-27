@@ -90,10 +90,6 @@ class Server:
             elif query_list[0] == 'unread':
                 connection.send(self.user.check_unread_messages().encode('utf8'))
 
-            elif query_list[0] == 'disconnect':
-                self.user.disconnect()
-                connection.send(('disconnect').encode('utf8'))
-
             elif query_list[0] == 'stop':
                 connection.send(('server closed').encode('utf8'))
                 self.server_socket.close()
