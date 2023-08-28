@@ -3,6 +3,7 @@ import time
 from queue import Queue, Empty, Full
 import psycopg2
 
+
 class ConnectionPool:
     def __init__(self, database, user, password, host):
         self.database = database
