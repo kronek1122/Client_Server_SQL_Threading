@@ -1,5 +1,6 @@
 import psycopg2
 from db_connection_pool import ConnectionPool
+import time
 
 class DatabaseManager:
     def __init__(self, database, user, password, host):
@@ -50,6 +51,7 @@ class DatabaseManager:
             curr = conn.cursor()
             curr.execute(query)
             result = curr.fetchall()
+            time.sleep(0.1) #Added only to slow down working of threading
             self.connection_pool.release_connection(conn)
             return result
         except psycopg2.errors.ProgrammingError as exp:
