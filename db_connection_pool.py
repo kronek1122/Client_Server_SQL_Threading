@@ -10,7 +10,7 @@ class ConnectionPool:
         self.password = password
         self.host = host
         self.min_connections = 3
-        self.max_connections = 4
+        self.max_connections = 20
         self.connections_queue = Queue(maxsize=self.max_connections)
         self.semaphore = threading.Semaphore()
         self.start_time = time.time()
@@ -29,43 +29,55 @@ class ConnectionPool:
 
     def create_connection(self):
         with self.semaphore:
-            try:
-                connection = psycopg2.connect(database = self.database, user = self.user, password = self.password, host =self.host)
-                self.connections_queue.put(connection)
-            except Exception as exp:
-                print("Error creating connection:", exp)
+            if (self.connections_queue.qsize() + self.active_connections) < self.max_connections:
+                try:
+                    connection = psycopg2.connect(database = self.database, user = self.user, password = self.password, host =self.host)
+                    self.connections_queue.put(connection)
+                except Exception as exp:
+                    print("Error creating connection:", exp)
+                    return None
+            else:
                 return None
 
 
     def get_connection(self):
-        with self.semaphore:
-            try:
-                connection = self.connections_queue.get(timeout=2)
-                self.active_connections +=1
-            except Empty:
-                if self.connections_queue.qsize() + self.active_connections < self.max_connections:
+        try:
+            connection = self.connections_queue.get_nowait()
+            self.active_connections +=1
+        except Empty:
+            if (self.connections_queue.qsize() + self.active_connections) < self.max_connections:
+                try:
                     self.create_connection()
-                    connection = self.connections_queue.get(timeout=2)
+                    connection = self.connections_queue.get_nowait()
                     self.active_connections +=1
-                else:
+                except Empty:
                     while True:
                         try:
                             connection = self.connections_queue.get(timeout=2)
+                            self.active_connections +=1
                             break
                         except Empty:
                             pass
-            return connection
+            else:
+                while True:
+                    try:
+                        connection = self.connections_queue.get(timeout=2)
+                        self.active_connections +=1
+                        break
+                    except Empty:
+                        pass
+        return connection
 
 
     def connections_manager(self):
         while True:
             while self.connections_queue.qsize()>self.min_connections:
-                print(self.connections_queue.qsize)
-                connection = self.connections_queue.get()
-                try:
-                    connection.close()
-                except Exception as exp:
-                    print("Error:", exp)
+                with self.semaphore:
+                    connection = self.connections_queue.get()
+                    try:
+                        connection.close()
+                    except Exception as exp:
+                        print("Error:", exp)
 
             print(f"""
         Time from start: {round(time.time() - self.start_time, 2)}
@@ -73,13 +85,13 @@ class ConnectionPool:
         Active connections: {self.active_connections}
         Connections in Queue: {self.connections_queue.qsize()}
                 """)
-            time.sleep(3)
+            time.sleep(4)
 
 
     def destroy_connections(self):
         with self.semaphore:
             while not self.connections_queue.empty():
-                connection = self.connections_queue.get()
+                connection = self.connections_queue.get_nowait()
                 try:
                     connection.close()
                 except Exception as exp:
@@ -89,14 +101,14 @@ class ConnectionPool:
     def release_connection(self, connection):
         with self.semaphore:
             try:
-                self.connections_queue.put(connection, timeout=2)
+                self.connections_queue.put_nowait(connection)
                 self.active_connections -=1
                 self.connections_released += 1
             except Full:
                 try:
-                    print("zamykanie połączenia")
                     connection.close()
-                    print('połączenie zamknięte')
+                    self.active_connections -=1
+                    self.connections_released += 1
                 except Exception as exp:
                     print("Error:", exp)
 
