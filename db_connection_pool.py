@@ -43,13 +43,13 @@ class ConnectionPool:
 
     def get_connection(self):
         try:
-            connection = self.connections_queue.get_nowait()
+            connection = self.connections_queue.get(timeout=2)
             self.active_connections +=1
         except Empty:
             if (self.connections_queue.qsize() + self.active_connections) < self.max_connections:
                 try:
                     self.create_connection()
-                    connection = self.connections_queue.get_nowait()
+                    connection = self.connections_queue.get(timeout=2)
                     self.active_connections +=1
                 except Empty:
                     while True:
@@ -81,22 +81,13 @@ class ConnectionPool:
                         print("Error:", exp)
 
             print(f"""
-        Time from start: {round(time.time() - self.start_time, 2)}
-        Realised connections: {self.connections_released}
-        Active connections: {self.active_connections}
-        Connections in Queue: {self.connections_queue.qsize()}
+    Time from start: {round(time.time() - self.start_time, 2)}
+    Realised connections: {self.connections_released}
+    Active connections: {self.active_connections}
+    Available connections: {self.connections_queue.qsize()}
                 """)
+            
             time.sleep(4)
-
-
-    def destroy_connections(self):
-        with self.semaphore:
-            while not self.connections_queue.empty():
-                connection = self.connections_queue.get_nowait()
-                try:
-                    connection.close()
-                except Exception as exp:
-                    print("Error:", exp)
 
 
     def release_connection(self, connection):
