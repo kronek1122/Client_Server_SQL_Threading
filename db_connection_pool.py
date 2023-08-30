@@ -93,7 +93,7 @@ class ConnectionPool:
     def release_connection(self, connection):
         with self.semaphore:
             try:
-                self.connections_queue.put_nowait(connection)
+                self.connections_queue.put(connection)
                 self.active_connections -=1
                 self.connections_released += 1
             except Full:
