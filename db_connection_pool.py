@@ -43,42 +43,28 @@ class ConnectionPool:
 
     def get_connection(self):
         try:
+            self.create_connection()
             connection = self.connections_queue.get(timeout=2)
             self.active_connections +=1
         except Empty:
-            if (self.connections_queue.qsize() + self.active_connections) < self.max_connections:
+            while True:
                 try:
-                    self.create_connection()
                     connection = self.connections_queue.get(timeout=2)
                     self.active_connections +=1
+                    break
                 except Empty:
-                    while True:
-                        try:
-                            connection = self.connections_queue.get(timeout=2)
-                            self.active_connections +=1
-                            break
-                        except Empty:
-                            pass
-            else:
-                while True:
-                    try:
-                        connection = self.connections_queue.get(timeout=2)
-                        self.active_connections +=1
-                        break
-                    except Empty:
-                        pass
+                    pass
         return connection
 
 
     def connections_manager(self):
         while True:
             while self.connections_queue.qsize()>self.min_connections:
-                with self.semaphore:
-                    connection = self.connections_queue.get()
-                    try:
-                        connection.close()
-                    except Exception as exp:
-                        print("Error:", exp)
+                connection = self.connections_queue.get()
+                try:
+                    connection.close()
+                except Exception as exp:
+                    print("Error:", exp)
 
             print(f"""
     Time from start: {round(time.time() - self.start_time, 2)}
@@ -103,4 +89,3 @@ class ConnectionPool:
                     self.connections_released += 1
                 except Exception as exp:
                     print("Error:", exp)
-
