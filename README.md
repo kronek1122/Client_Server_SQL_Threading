@@ -16,4 +16,5 @@ Requirements:
 - standards modules (threading, socket, queue, os, json, time, multiprocessing)
 
 Link to a video of the application in action: https://www.youtube.com/watch?v=lrm_iI2eZxw
+
 Link to a video with stress test of application: https://www.youtube.com/watch?v=pbvuNGZbpfs
